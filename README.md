@@ -1,18 +1,24 @@
-# Messenger for Mac
+# Messenger for Mac (Apple Silicon)
 
 A standalone desktop app for Facebook Messenger on macOS. Chat with friends without opening a browser.
 
 **Why this exists:** Meta discontinued the official Messenger desktop app. This is a lightweight replacement that lets you use Messenger without keeping a browser tab open.
 
+### Why this fork?
+
+Upstream [stefanminch/messenger-mac](https://github.com/stefanminch/messenger-mac) ships an **x86_64** build. On Apple Silicon Macs that requires Rosetta, and future macOS versions may drop Rosetta support entirely.
+
+This fork delivers a **native arm64** release so the app runs without Rosetta and stays usable on future Apple Silicon–only macOS.
+
 <img src="icon.png" width="128" alt="Messenger for Mac">
 
 ## Download
 
-**[Download Messenger for Mac v1.3.0 (DMG)](https://github.com/stefanminch/messenger-mac/releases/download/v1.3.0/MessengerApp-1.3.0.dmg)** | macOS 10.13+
+**[Download Messenger for Mac v1.3.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[![GitHub Release](https://img.shields.io/github/v/release/stefanminch/messenger-mac)](https://github.com/stefanminch/messenger-mac/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
-> Signed and notarized by Apple for your security.
+> Native arm64 — no Rosetta required.
 
 ## Features
 
@@ -46,10 +52,12 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [DMG file](https://github.com/stefanminch/messenger-mac/releases/download/v1.3.0/MessengerApp-1.3.0.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight
+
+If Gatekeeper blocks the first launch, right-click the app → **Open**.
 
 ## Build from Source
 
@@ -57,30 +65,53 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 - Node.js 18+
 - npm or yarn
+- Apple Silicon Mac (for a native arm64 build)
+- For signed + notarized builds: a **Developer ID Application** certificate in your login keychain (with private key), plus an Apple ID with an [app-specific password](https://appleid.apple.com/account/manage)
 
 ### Steps
 
 ```bash
-# Clone the repository
-git clone https://github.com/stefanminch/messenger-mac.git
-cd messenger-mac
+# Clone this fork
+git clone https://github.com/billylo1/messenger-mac-apple-silicon.git
+cd messenger-mac-apple-silicon
 
 # Install dependencies
 npm install
 
 # Run in development mode
 npm start
+```
 
-# Build for production
+### Production build (signed + notarized)
+
+electron-builder 25+ expects notarization credentials via environment variables (not `notarize.teamId` alone):
+
+```bash
+export APPLE_ID="you@example.com"
+export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
+export APPLE_TEAM_ID="YOUR_TEAM_ID"
+
+# Optional: pin the signing identity if multiple certs are installed
+# export CSC_NAME="Developer ID Application: Your Name (TEAMID)"
+
 npm run build
 ```
 
-The built app will be in the `dist/` folder.
+Outputs land in `dist/`:
+
+- `MessengerApp-<version>-arm64.dmg`
+- `MessengerApp-<version>-arm64-mac.zip`
+
+Without `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`, the build may still sign locally but notarization will be skipped or fail. Notarization requires a **Developer ID Application** cert — Apple Development / Apple Distribution will not work for outside-the-store distribution.
 
 ## Tech Stack
 
 - [Electron](https://www.electronjs.org/) - Cross-platform desktop apps
 - JavaScript/Node.js
+
+## Upstream
+
+Based on [stefanminch/messenger-mac](https://github.com/stefanminch/messenger-mac). This fork focuses on shipping arm64 binaries for Apple Silicon.
 
 ## FAQ
 
@@ -88,7 +119,7 @@ The built app will be in the `dist/` folder.
 No, this is an unofficial wrapper around messenger.com. It's not affiliated with Meta/Facebook.
 
 ### Is it safe?
-Yes. The app is signed and notarized by Apple. It simply loads messenger.com in a native window - no modifications to Messenger itself.
+The app loads messenger.com in a native window — no modifications to Messenger itself. Release builds from this fork are intended to be code-signed; notarization depends on a valid Developer ID Application certificate and Apple notarization credentials at build time.
 
 ### Why use this instead of the browser?
 - Dedicated app in your dock
@@ -96,6 +127,9 @@ Yes. The app is signed and notarized by Apple. It simply loads messenger.com in 
 - Stays logged in
 - Cleaner experience
 - Less resource usage than a full browser
+
+### Why not the upstream release?
+Upstream v1.3.0 is **x86_64** and needs Rosetta on Apple Silicon. This fork’s builds are **arm64** native.
 
 ### Does it support voice/video calls?
 Yes, all Messenger features work including voice and video calls.
@@ -105,7 +139,7 @@ Make sure to quit the app with `Cmd+Q` (not just close the window) to save your 
 
 ## Keywords
 
-Facebook Messenger Mac, Messenger Desktop App, Messenger macOS, Facebook Chat Mac App, Messenger without browser, Standalone Messenger Mac, Messenger Mac download, Facebook Messenger native app, Messenger Electron app, Mac Messenger client
+Facebook Messenger Mac, Messenger Desktop App, Messenger macOS, Facebook Chat Mac App, Messenger without browser, Standalone Messenger Mac, Messenger Mac download, Facebook Messenger native app, Messenger Electron app, Mac Messenger client, Messenger Apple Silicon, Messenger arm64
 
 ## License
 
@@ -114,7 +148,3 @@ MIT License - feel free to modify and distribute.
 ## Disclaimer
 
 This project is not affiliated with, authorized, maintained, sponsored, or endorsed by Meta/Facebook or any of its affiliates or subsidiaries. This is an independent and unofficial app. Use at your own risk.
-
----
-
-**Star this repo if you find it useful!**
