@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.5.0 (2026-07-28)
+
+### Changes
+- **Bundle ID** - Now `org.evergreenlabs.MacMessenger`
+- **Notarized builds** - Local `.env` credentials for Apple notarization via `npm run build`
+
+---
+
 ## v1.4.0 (2026-07-28)
 
 ### Improvements

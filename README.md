@@ -14,9 +14,9 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 
 ## Download
 
-**[Download Messenger for Mac v1.4.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.5.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Native arm64 — no Rosetta required.
 
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight
@@ -84,18 +84,21 @@ npm start
 
 ### Production build (signed + notarized)
 
-electron-builder 25+ expects notarization credentials via environment variables (not `notarize.teamId` alone):
+Credentials live in a local `.env` (gitignored). Copy the example and fill in your Apple ID + [app-specific password](https://appleid.apple.com/account/manage):
 
 ```bash
-export APPLE_ID="you@example.com"
-export APPLE_APP_SPECIFIC_PASSWORD="xxxx-xxxx-xxxx-xxxx"
-export APPLE_TEAM_ID="YOUR_TEAM_ID"
-
-# Optional: pin the signing identity if multiple certs are installed
-# export CSC_NAME="Developer ID Application: Your Name (TEAMID)"
+cp .env.example .env
+# edit .env — set APPLE_ID and APPLE_APP_SPECIFIC_PASSWORD
 
 npm run build
 ```
+
+`scripts/build.sh` loads `.env` and runs electron-builder. Required vars:
+
+- `APPLE_ID`
+- `APPLE_APP_SPECIFIC_PASSWORD`
+- `APPLE_TEAM_ID` (defaults to Evergreen Labs in `.env.example`)
+- Optional `CSC_NAME` to pin the Developer ID signing identity
 
 Outputs land in `dist/`:
 
