@@ -1,6 +1,6 @@
 {
   "name": "messenger-app",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "Standalone Facebook Messenger app for macOS",
   "main": "main.js",
   "scripts": {
@@ -19,9 +19,15 @@
     "mac": {
       "category": "public.app-category.social-networking",
       "icon": "icon.icns",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false
     }
+  },
+  "dependencies": {
+    "@aptabase/electron": "^0.3.1"
   }
 }

@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.6.0 (2026-07-28)
+
+### New Features
+- **Aptabase analytics** — Privacy-first usage analytics via self-hosted Aptabase (`aptabase.evergreen-labs.org`)
+- **Window title** — Launch title is now "Messenger for Mac" instead of "messenger-app"
+
+---
+
 ## v1.5.0 (2026-07-28)
 
 ### Changes

@@ -1,9 +1,15 @@
 const { app, BrowserWindow, shell, Menu, session, dialog, net } = require('electron');
+const { initialize: initAptabase, trackEvent } = require('@aptabase/electron/main');
 const path = require('path');
 const fs = require('fs');
 
 const CURRENT_VERSION = app.getVersion();
 const GITHUB_REPO = 'billylo1/messenger-mac-apple-silicon';
+
+// Aptabase (self-hosted) — must initialize before app.whenReady()
+initAptabase('A-SH-4674667238', {
+  host: 'https://aptabase.evergreen-labs.org'
+});
 
 // Set app data path explicitly
 app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
@@ -209,6 +215,7 @@ function createWindow() {
     height: 800,
     minWidth: 400,
     minHeight: 600,
+    title: 'Messenger for Mac',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -479,6 +486,8 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
+  trackEvent('app_started');
+
   createMenu();
   createWindow();
 
