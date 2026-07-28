@@ -1,5 +1,19 @@
 # Release Notes
 
+## v1.7.0 (2026-07-28)
+
+### New Features
+- **Native notifications** — macOS alerts when new messages arrive (Notification + Service Worker hooks, iframe relay)
+- **Dock badge** — Unread count from Messenger's title updates
+- **Background delivery** — Disabled Chromium background throttling so messages still arrive when unfocused
+- **Help → Test Notification** — Quick way to verify notification delivery
+
+### Improvements
+- Spoofs Page Visibility when blurred/minimized so Messenger raises alerts
+- Welcome screen highlights notifications instead of power-saving throttle
+
+---
+
 ## v1.6.0 (2026-07-28)
 
 ### New Features

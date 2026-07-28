@@ -14,9 +14,9 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 
 ## Download
 
-**[Download Messenger for Mac v1.5.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.7.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Native arm64 — no Rosetta required.
 
@@ -25,12 +25,12 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 - **Native macOS App** - Runs as a standalone application in your dock
 - **No Browser Required** - Access Messenger without opening Chrome, Safari, or Firefox
 - **Persistent Login** - Stay logged in between app restarts
-- **Native Notifications** - Get notified of new messages
+- **Native Notifications** - Get notified of new messages (dock badge + macOS alerts)
 - **Minimal & Fast** - Lightweight app with low memory footprint
 - **Privacy Focused** - No tracking, no analytics, no data collection
 - **Dark Mode Support** - Follows your macOS appearance settings
 - **External Links** - Shared links open in your default browser
-- **Power Saving Mode** - Automatically throttles when in background to reduce CPU/battery usage
+- **Background Delivery** - Stays connected when unfocused so new messages still arrive
 - **Auto-Update Check** - Get notified when a new version is available
 - **Keyboard Shortcuts** - Quick navigation with custom shortcuts
 
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.5.0/MessengerApp-1.5.0-arm64.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight

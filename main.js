@@ -1,74 +1,136 @@
-const { app, BrowserWindow, shell, Menu, session, dialog, net } = require('electron');
+const { app, BrowserWindow, shell, Menu, session, dialog, net, Notification, ipcMain } = require('electron');
 const { initialize: initAptabase, trackEvent } = require('@aptabase/electron/main');
 const path = require('path');
 const fs = require('fs');
 
 const CURRENT_VERSION = app.getVersion();
 const GITHUB_REPO = 'billylo1/messenger-mac-apple-silicon';
+const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 
-function parseEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const out = {};
-  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    let value = trimmed.slice(eq + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    out[key] = value;
-  }
-  return out;
-}
-
-function normalizeHost(host) {
-  if (!host) return host;
-  if (host.startsWith('http://') || host.startsWith('https://')) return host;
-  return `https://${host}`;
-}
-
-function loadAptabaseConfig() {
-  const configPath = path.join(__dirname, 'aptabase.config.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (cfg.appKey && cfg.host) {
-        return { appKey: cfg.appKey, host: normalizeHost(cfg.host) };
-      }
-    } catch (e) {}
-  }
-
-  const env = {
-    ...parseEnvFile(path.join(__dirname, '.env')),
-    ...process.env
-  };
-  const appKey = env.APTABASE_APP_KEY;
-  const host = env.APTABASE_HOST;
-  if (!appKey || !host) return null;
-  return { appKey, host: normalizeHost(host) };
-}
-
-// Aptabase — must initialize before app.whenReady(); config from .env / aptabase.config.json
-let aptabaseEnabled = false;
-const aptabaseConfig = loadAptabaseConfig();
-if (aptabaseConfig) {
-  initAptabase(aptabaseConfig.appKey, { host: aptabaseConfig.host });
-  aptabaseEnabled = true;
-} else {
-  console.warn('Aptabase: APTABASE_APP_KEY / APTABASE_HOST not set; analytics disabled');
-}
+// Aptabase (self-hosted) — must initialize before app.whenReady()
+initAptabase('A-SH-4674667238', {
+  host: 'https://aptabase.evergreen-labs.org'
+});
 
 // Set app data path explicitly
 app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
 
 let mainWindow;
 let isQuitting = false;
+let lastNotifyKey = '';
+let lastNotifyAt = 0;
+
+function focusMainWindow() {
+  if (!mainWindow) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function setupNotificationBridge() {
+  ipcMain.on('native-notify', (_event, payload = {}) => {
+    // Skip while the user is actively looking at the app
+    if (mainWindow && mainWindow.isFocused() && !mainWindow.isMinimized()) {
+      return;
+    }
+
+    if (!Notification.isSupported()) {
+      console.log('[notify] Electron Notification not supported on this system');
+      return;
+    }
+
+    const title = payload.title || 'Messenger';
+    const body = payload.body || '';
+    const key = `${payload.tag || ''}|${title}|${body}`;
+    const now = Date.now();
+    if (key === lastNotifyKey && now - lastNotifyAt < 2000) {
+      return;
+    }
+    lastNotifyKey = key;
+    lastNotifyAt = now;
+
+    try {
+      const notification = new Notification({
+        title,
+        body,
+        silent: !!payload.silent
+      });
+      notification.on('click', () => focusMainWindow());
+      notification.on('failed', (_e, err) => {
+        console.log('[notify] failed:', err);
+      });
+      notification.show();
+    } catch (err) {
+      console.log('[notify] error:', err);
+    }
+  });
+
+  ipcMain.on('set-badge', (_event, count) => {
+    const n = Number(count) || 0;
+    app.setBadgeCount(n > 0 ? n : 0);
+  });
+}
+
+function setupPermissionHandlers(ses) {
+  ses.setPermissionRequestHandler((_webContents, permission, callback) => {
+    const allow = [
+      'notifications',
+      'media',
+      'mediaKeySystem',
+      'pointerLock',
+      'fullscreen',
+      'clipboard-sanitized-write'
+    ].includes(permission);
+    callback(allow);
+  });
+
+  ses.setPermissionCheckHandler((_webContents, permission) => {
+    if (permission === 'notifications') return true;
+    return true;
+  });
+}
+
+const NOTIFICATION_INJECT = fs.readFileSync(path.join(__dirname, 'notification-inject.js'), 'utf8');
+
+function injectNotificationHooks(webContents) {
+  if (!webContents || webContents.isDestroyed()) return;
+
+  const run = (frame) => {
+    if (!frame || frame.isDestroyed?.()) return;
+    frame.executeJavaScript(NOTIFICATION_INJECT, true).catch(() => {});
+  };
+
+  try {
+    run(webContents.mainFrame);
+    for (const frame of webContents.mainFrame.framesInSubtree || []) {
+      run(frame);
+    }
+  } catch (err) {
+    webContents.executeJavaScript(NOTIFICATION_INJECT, true).catch(() => {});
+  }
+}
+
+function setPageVisibility(hidden) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  // Messenger often suppresses alerts while document.visibilityState === 'visible'.
+  // Spoof hidden when the window is blurred/minimized so it will raise notifications.
+  const script = `
+    (function() {
+      try {
+        Object.defineProperty(document, 'hidden', {
+          configurable: true,
+          get: function() { return ${hidden ? 'true' : 'false'}; }
+        });
+        Object.defineProperty(document, 'visibilityState', {
+          configurable: true,
+          get: function() { return '${hidden ? 'hidden' : 'visible'}'; }
+        });
+        document.dispatchEvent(new Event('visibilitychange'));
+      } catch (e) {}
+    })();
+  `;
+  mainWindow.webContents.executeJavaScript(script, true).catch(() => {});
+}
 
 // Settings file path
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -244,7 +306,7 @@ function showWelcomeWindow() {
 
       <div class="section">
         <div class="section-title">Features</div>
-        <div class="feature"><span class="feature-icon">⚡</span><span>Power Saving - Auto-throttles when in background</span></div>
+        <div class="feature"><span class="feature-icon">🔔</span><span>Native Notifications - Alerts for new messages</span></div>
         <div class="feature"><span class="feature-icon">💾</span><span>Persistent Login - Stay signed in between sessions</span></div>
         <div class="feature"><span class="feature-icon">🎨</span><span>Sidebar visibility is remembered across restarts</span></div>
       </div>
@@ -270,10 +332,18 @@ function createWindow() {
     minHeight: 600,
     title: 'Messenger for Mac',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: PRELOAD_PATH,
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Keep Messenger's realtime connection alive in the background so
+      // new-message events (and thus notifications) still arrive.
+      backgroundThrottling: false
     }
+  });
+
+  // Keep our window title; document.title still updates for unread badges.
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault();
   });
 
   // Log file path
@@ -309,26 +379,34 @@ function createWindow() {
   // Load Facebook Messenger
   mainWindow.loadURL('https://www.messenger.com');
 
+  // Re-inject into main + child frames (Messenger may create fbsbx iframes later)
+  mainWindow.webContents.on('dom-ready', () => {
+    injectNotificationHooks(mainWindow.webContents);
+  });
+  mainWindow.webContents.on('did-frame-finish-load', (_event, isMainFrame) => {
+    injectNotificationHooks(mainWindow.webContents);
+    if (isMainFrame) {
+      // Ensure visibility matches window state after navigations
+      setPageVisibility(!(mainWindow.isFocused() && !mainWindow.isMinimized()));
+    }
+  });
+  mainWindow.webContents.on('frame-created', (_event, details) => {
+    const frame = details && details.frame;
+    if (!frame) return;
+    frame.executeJavaScript(NOTIFICATION_INJECT, true).catch(() => {});
+  });
+
   // Apply sidebar state when page finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
     setTimeout(() => applySidebarState(), 1000);
   });
 
-  // Power saving: throttle when window is hidden/minimized/unfocused
-  mainWindow.on('blur', () => {
-    mainWindow.webContents.setBackgroundThrottling(true);
-  });
-
-  mainWindow.on('focus', () => {
-    mainWindow.webContents.setBackgroundThrottling(false);
-  });
-
-  mainWindow.on('minimize', () => {
-    mainWindow.webContents.setBackgroundThrottling(true);
-  });
-
+  // Spoof Page Visibility so Messenger raises notifications when unfocused
+  mainWindow.on('blur', () => setPageVisibility(true));
+  mainWindow.on('focus', () => setPageVisibility(false));
+  mainWindow.on('minimize', () => setPageVisibility(true));
   mainWindow.on('restore', () => {
-    mainWindow.webContents.setBackgroundThrottling(false);
+    if (mainWindow.isFocused()) setPageVisibility(false);
   });
 
   // Red close button / Cmd+W: minimize instead of destroying the window,
@@ -338,6 +416,7 @@ function createWindow() {
     if (!isQuitting) {
       event.preventDefault();
       mainWindow.minimize();
+      setPageVisibility(true);
     }
   });
 
@@ -528,6 +607,33 @@ function createMenu() {
       label: 'Help',
       submenu: [
         { label: 'Keyboard Shortcuts', click: () => showWelcomeWindow() },
+        {
+          label: 'Test Notification',
+          click: () => {
+            if (!Notification.isSupported()) {
+              dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Notifications',
+                message: 'Notifications are not supported on this system.'
+              });
+              return;
+            }
+            const n = new Notification({
+              title: 'Messenger for Mac',
+              body: 'Native notifications are working.'
+            });
+            n.on('click', () => focusMainWindow());
+            n.on('failed', (_e, err) => {
+              dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                title: 'Notification Failed',
+                message: 'macOS rejected the notification.',
+                detail: String(err || '') + '\n\nUnsigned/dev builds sometimes fail — a signed build is required for reliable alerts.'
+              });
+            });
+            n.show();
+          }
+        },
         { type: 'separator' },
         { label: 'Check for Updates...', click: () => checkForUpdates(false) }
       ]
@@ -539,9 +645,10 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
-  if (aptabaseEnabled) {
-    trackEvent('app_started');
-  }
+  trackEvent('app_started');
+
+  setupPermissionHandlers(session.defaultSession);
+  setupNotificationBridge();
 
   createMenu();
   createWindow();
@@ -564,7 +671,13 @@ app.whenReady().then(() => {
     }
     mainWindow.show();
     mainWindow.focus();
+    setPageVisibility(false);
   });
+});
+
+// Clear dock badge on quit
+app.on('will-quit', () => {
+  app.setBadgeCount(0);
 });
 
 app.on('window-all-closed', () => {
