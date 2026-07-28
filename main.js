@@ -6,10 +6,63 @@ const fs = require('fs');
 const CURRENT_VERSION = app.getVersion();
 const GITHUB_REPO = 'billylo1/messenger-mac-apple-silicon';
 
-// Aptabase (self-hosted) — must initialize before app.whenReady()
-initAptabase('A-SH-4674667238', {
-  host: 'https://aptabase.evergreen-labs.org'
-});
+function parseEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  const out = {};
+  for (const line of fs.readFileSync(filePath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    out[key] = value;
+  }
+  return out;
+}
+
+function normalizeHost(host) {
+  if (!host) return host;
+  if (host.startsWith('http://') || host.startsWith('https://')) return host;
+  return `https://${host}`;
+}
+
+function loadAptabaseConfig() {
+  const configPath = path.join(__dirname, 'aptabase.config.json');
+  if (fs.existsSync(configPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (cfg.appKey && cfg.host) {
+        return { appKey: cfg.appKey, host: normalizeHost(cfg.host) };
+      }
+    } catch (e) {}
+  }
+
+  const env = {
+    ...parseEnvFile(path.join(__dirname, '.env')),
+    ...process.env
+  };
+  const appKey = env.APTABASE_APP_KEY;
+  const host = env.APTABASE_HOST;
+  if (!appKey || !host) return null;
+  return { appKey, host: normalizeHost(host) };
+}
+
+// Aptabase — must initialize before app.whenReady(); config from .env / aptabase.config.json
+let aptabaseEnabled = false;
+const aptabaseConfig = loadAptabaseConfig();
+if (aptabaseConfig) {
+  initAptabase(aptabaseConfig.appKey, { host: aptabaseConfig.host });
+  aptabaseEnabled = true;
+} else {
+  console.warn('Aptabase: APTABASE_APP_KEY / APTABASE_HOST not set; analytics disabled');
+}
 
 // Set app data path explicitly
 app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
@@ -486,7 +539,9 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
-  trackEvent('app_started');
+  if (aptabaseEnabled) {
+    trackEvent('app_started');
+  }
 
   createMenu();
   createWindow();

@@ -99,6 +99,7 @@ npm run build
 - `APPLE_APP_SPECIFIC_PASSWORD`
 - `APPLE_TEAM_ID` (defaults to Evergreen Labs in `.env.example`)
 - Optional `CSC_NAME` to pin the Developer ID signing identity
+- `APTABASE_APP_KEY` / `APTABASE_HOST` for analytics (baked into the build as `aptabase.config.json`, which is gitignored)
 
 Outputs land in `dist/`:
 
