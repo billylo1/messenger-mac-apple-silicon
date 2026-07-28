@@ -3,12 +3,13 @@ const path = require('path');
 const fs = require('fs');
 
 const CURRENT_VERSION = app.getVersion();
-const GITHUB_REPO = 'stefanminch/messenger-mac';
+const GITHUB_REPO = 'billylo1/messenger-mac-apple-silicon';
 
 // Set app data path explicitly
 app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
 
 let mainWindow;
+let isQuitting = false;
 
 // Settings file path
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -270,6 +271,16 @@ function createWindow() {
     mainWindow.webContents.setBackgroundThrottling(false);
   });
 
+  // Red close button / Cmd+W: minimize instead of destroying the window,
+  // so Messenger stays loaded and resumes instantly. Real quit is via
+  // menu Quit or Cmd+Q (isQuitting).
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.minimize();
+    }
+  });
+
   // Check if URL is a Messenger/Facebook redirect link and extract real URL
   function getExternalUrl(url) {
     try {
@@ -480,9 +491,15 @@ app.whenReady().then(() => {
   setTimeout(() => checkForUpdates(true), 5000);
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (!mainWindow) {
       createWindow();
+      return;
     }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore();
+    }
+    mainWindow.show();
+    mainWindow.focus();
   });
 });
 
@@ -492,7 +509,8 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Flush cookies before quitting
+// Flush cookies before quitting; allow the close handler to destroy the window
 app.on('before-quit', async () => {
+  isQuitting = true;
   await session.defaultSession.cookies.flushStore();
 });

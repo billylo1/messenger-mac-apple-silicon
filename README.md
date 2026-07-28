@@ -14,9 +14,9 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 
 ## Download
 
-**[Download Messenger for Mac v1.3.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.4.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Native arm64 — no Rosetta required.
 
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.3.0/MessengerApp-1.3.0-arm64.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.4.0/MessengerApp-1.4.0-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight
@@ -135,7 +135,7 @@ Upstream v1.3.0 is **x86_64** and needs Rosetta on Apple Silicon. This fork’s 
 Yes, all Messenger features work including voice and video calls.
 
 ### My login isn't persisting?
-Make sure to quit the app with `Cmd+Q` (not just close the window) to save your session.
+Quit with `Cmd+Q` (or Messenger → Quit) so the session is flushed. The red close button only minimizes and keeps the app running.
 
 ## Keywords
 

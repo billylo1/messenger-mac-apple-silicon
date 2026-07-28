@@ -1,5 +1,12 @@
 # Release Notes
 
+## v1.4.0 (2026-07-28)
+
+### Improvements
+- **Close minimizes** - The red close button (and Cmd+W) minimizes the window instead of quitting, so Messenger stays loaded and resumes instantly. Quit via the menu or Cmd+Q.
+
+---
+
 ## v1.3.0 (2025-12-27)
 
 ### New Features
