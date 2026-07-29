@@ -14,9 +14,9 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 
 ## Download
 
-**[Download Messenger for Mac v1.7.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.8.0 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.0/MessengerApp-1.8.0-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.0/MessengerApp-1.8.0-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Native arm64 — no Rosetta required.
 
@@ -31,7 +31,7 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 - **Dark Mode Support** - Follows your macOS appearance settings
 - **External Links** - Shared links open in your default browser
 - **Background Delivery** - Stays connected when unfocused so new messages still arrive
-- **Auto-Update Check** - Get notified when a new version is available
+- **Auto-Update** - Detects new versions and installs in-app (restart to apply)
 - **Keyboard Shortcuts** - Quick navigation with custom shortcuts
 
 ## Keyboard Shortcuts
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.7.0/MessengerApp-1.7.0-arm64.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.0/MessengerApp-1.8.0-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight
@@ -105,6 +105,9 @@ Outputs land in `dist/`:
 
 - `MessengerApp-<version>-arm64.dmg`
 - `MessengerApp-<version>-arm64-mac.zip`
+- `latest-mac.yml` — **required** on every GitHub release for in-app self-update
+
+When creating a GitHub release, upload all three (DMG, zip, and `latest-mac.yml`). Self-update uses the zip + YAML feed; without `latest-mac.yml`, installed apps cannot find the new version.
 
 Without `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`, the build may still sign locally but notarization will be skipped or fail. Notarization requires a **Developer ID Application** cert — Apple Development / Apple Distribution will not work for outside-the-store distribution.
 

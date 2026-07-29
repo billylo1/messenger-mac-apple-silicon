@@ -21,4 +21,7 @@ else
   rm -f aptabase.config.json
 fi
 
+# After a successful build, attach dist/latest-mac.yml to the GitHub release
+# alongside the DMG and zip so in-app self-update can resolve the feed.
 exec npx electron-builder --mac "$@"
+

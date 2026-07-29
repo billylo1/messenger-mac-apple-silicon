@@ -1,10 +1,10 @@
 const { app, BrowserWindow, shell, Menu, session, dialog, net, Notification, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { initialize: initAptabase, trackEvent } = require('@aptabase/electron/main');
 const path = require('path');
 const fs = require('fs');
 
 const CURRENT_VERSION = app.getVersion();
-const GITHUB_REPO = 'billylo1/messenger-mac-apple-silicon';
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 
 // Aptabase (self-hosted) — must initialize before app.whenReady()
@@ -19,6 +19,9 @@ let mainWindow;
 let isQuitting = false;
 let lastNotifyKey = '';
 let lastNotifyAt = 0;
+let updateCheckSilent = true;
+let updatePromptOpen = false;
+let updaterConfigured = false;
 
 function focusMainWindow() {
   if (!mainWindow) return;
@@ -162,80 +165,141 @@ function saveSettings(settings) {
 
 let settings = loadSettings();
 
-// Check for updates and track usage
-function checkForUpdates(silent = false) {
-  const request = net.request({
-    method: 'GET',
-    url: `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`
-  });
-
-  request.setHeader('User-Agent', `MessengerApp/${CURRENT_VERSION}`);
-
-  request.on('response', (response) => {
-    let data = '';
-    response.on('data', (chunk) => { data += chunk; });
-    response.on('end', () => {
-      try {
-        const release = JSON.parse(data);
-        const latestVersion = release.tag_name.replace('v', '');
-
-        if (latestVersion !== CURRENT_VERSION) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'Update Available',
-            message: `A new version (v${latestVersion}) is available!`,
-            detail: `You have v${CURRENT_VERSION}. Would you like to download the update?`,
-            buttons: ['Download', 'Later'],
-            defaultId: 0
-          }).then(({ response }) => {
-            if (response === 0) {
-              shell.openExternal(release.html_url);
-            }
-          });
-        } else if (!silent) {
-          dialog.showMessageBox(mainWindow, {
-            type: 'info',
-            title: 'No Updates',
-            message: 'You\'re up to date!',
-            detail: `Version ${CURRENT_VERSION} is the latest.`
-          });
-        }
-      } catch (e) {}
-    });
-  });
-
-  request.on('error', () => {});
-  request.end();
-
-  // Track unique daily active users (per-day counter for history)
+function trackDailyUsage() {
   const today = new Date().toISOString().split('T')[0];
-  if (settings.lastPingDate !== today) {
-    if (!settings.installId) {
-      settings.installId = generateInstallId();
-    }
-    settings.lastPingDate = today;
-    saveSettings(settings);
+  if (settings.lastPingDate === today) return;
 
-    // Ping daily counter (e.g., daily-2025-12-26)
-    const dailyPing = net.request({
-      method: 'GET',
-      url: `https://api.counterapi.dev/v1/messenger-mac/daily-${today}/up`
-    });
-    dailyPing.on('error', () => {});
-    dailyPing.end();
-
-    // Also ping total unique users (first time only)
-    if (!settings.countedAsUser) {
-      settings.countedAsUser = true;
-      saveSettings(settings);
-      const totalPing = net.request({
-        method: 'GET',
-        url: 'https://api.counterapi.dev/v1/messenger-mac/total-users/up'
-      });
-      totalPing.on('error', () => {});
-      totalPing.end();
-    }
+  if (!settings.installId) {
+    settings.installId = generateInstallId();
   }
+  settings.lastPingDate = today;
+  saveSettings(settings);
+
+  const dailyPing = net.request({
+    method: 'GET',
+    url: `https://api.counterapi.dev/v1/messenger-mac/daily-${today}/up`
+  });
+  dailyPing.on('error', () => {});
+  dailyPing.end();
+
+  if (!settings.countedAsUser) {
+    settings.countedAsUser = true;
+    saveSettings(settings);
+    const totalPing = net.request({
+      method: 'GET',
+      url: 'https://api.counterapi.dev/v1/messenger-mac/total-users/up'
+    });
+    totalPing.on('error', () => {});
+    totalPing.end();
+  }
+}
+
+function setupAutoUpdater() {
+  if (updaterConfigured) return;
+  updaterConfigured = true;
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    if (updatePromptOpen) return;
+    updatePromptOpen = true;
+    const version = info.version || 'new';
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `A new version (v${version}) is available!`,
+      detail: `You have v${CURRENT_VERSION}. Download and install the update?`,
+      buttons: ['Update', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then(({ response }) => {
+      updatePromptOpen = false;
+      if (response === 0) {
+        autoUpdater.downloadUpdate().catch((err) => {
+          console.log('[updater] download failed:', err);
+          if (!updateCheckSilent) {
+            dialog.showMessageBox(mainWindow, {
+              type: 'warning',
+              title: 'Update Failed',
+              message: 'Could not download the update.',
+              detail: String(err && err.message ? err.message : err)
+            });
+          }
+        });
+      }
+    });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    if (!updateCheckSilent) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'No Updates',
+        message: 'You\'re up to date!',
+        detail: `Version ${CURRENT_VERSION} is the latest.`
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    const version = info.version || 'new';
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: `Version v${version} has been downloaded.`,
+      detail: 'Restart Messenger for Mac to install the update.',
+      buttons: ['Restart', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then(({ response }) => {
+      if (response === 0) {
+        isQuitting = true;
+        autoUpdater.quitAndInstall(false, true);
+      }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.log('[updater] error:', err);
+    if (!updateCheckSilent) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Update Check Failed',
+        message: 'Could not check for updates.',
+        detail: String(err && err.message ? err.message : err)
+      });
+    }
+  });
+}
+
+function checkForUpdates(silent = false) {
+  updateCheckSilent = !!silent;
+
+  if (!app.isPackaged) {
+    if (!silent) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Updates',
+        message: 'Self-update is only available in installed builds.',
+        detail: `You are running a development build (v${CURRENT_VERSION}).`
+      });
+    }
+    return;
+  }
+
+  setupAutoUpdater();
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.log('[updater] check failed:', err);
+    if (!silent) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        title: 'Update Check Failed',
+        message: 'Could not check for updates.',
+        detail: String(err && err.message ? err.message : err)
+      });
+    }
+  });
 }
 
 // Show welcome window on first launch
@@ -658,7 +722,9 @@ app.whenReady().then(() => {
     setTimeout(() => showWelcomeWindow(), 1500);
   }
 
-  // Check for updates silently on startup
+  trackDailyUsage();
+
+  // Check for updates silently on startup (packaged builds only)
   setTimeout(() => checkForUpdates(true), 5000);
 
   app.on('activate', () => {

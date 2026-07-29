@@ -1,5 +1,16 @@
 # Release Notes
 
+## v1.8.0 (2026-07-28)
+
+### New Features
+- **Self-update** — Detects new GitHub releases, downloads the update in-app, and installs on restart (electron-updater)
+- Startup and **Help → Check for Updates...** use the same prompt → download → restart flow
+
+### Release notes for maintainers
+- Attach `latest-mac.yml` from `dist/` on every GitHub release (alongside the DMG and zip) so clients can resolve the update feed
+
+---
+
 ## v1.7.0 (2026-07-28)
 
 ### New Features

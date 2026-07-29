@@ -1,8 +1,9 @@
 {
   "name": "messenger-app",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Standalone Facebook Messenger app for macOS",
   "main": "main.js",
+  "repository": "https://github.com/billylo1/messenger-mac-apple-silicon",
   "scripts": {
     "start": "electron .",
     "build": "bash scripts/build.sh"
@@ -16,6 +17,13 @@
   "build": {
     "appId": "org.evergreenlabs.MacMessenger",
     "productName": "MessengerApp",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "billylo1",
+        "repo": "messenger-mac-apple-silicon"
+      }
+    ],
     "mac": {
       "category": "public.app-category.social-networking",
       "icon": "icon.icns",
@@ -28,6 +36,7 @@
     }
   },
   "dependencies": {
-    "@aptabase/electron": "^0.3.1"
+    "@aptabase/electron": "^0.3.1",
+    "electron-updater": "^6.6.2"
   }
 }
