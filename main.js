@@ -30,15 +30,55 @@ function focusMainWindow() {
   mainWindow.focus();
 }
 
+function showNativeNotification({ title, body, silent = false }) {
+  if (!Notification.isSupported()) {
+    console.log('[notify] Electron Notification not supported on this system');
+    return null;
+  }
+
+  try {
+    const notification = new Notification({
+      title: title || 'Messenger',
+      body: body || '',
+      silent: !!silent
+    });
+    notification.on('click', () => focusMainWindow());
+    notification.on('failed', (_e, err) => {
+      console.log('[notify] failed:', err);
+    });
+    notification.show();
+    return notification;
+  } catch (err) {
+    console.log('[notify] error:', err);
+    return null;
+  }
+}
+
+// macOS only prompts for notification access when UNUserNotificationCenter
+// receives a request — Electron does that on Notification.show(). Call once
+// so the app appears in System Settings → Notifications.
+function requestMacNotificationPermission() {
+  if (process.platform !== 'darwin') return;
+  if (!Notification.isSupported()) return;
+  if (settings.hasRequestedNotificationPermission) return;
+
+  settings.hasRequestedNotificationPermission = true;
+  saveSettings(settings);
+
+  // Packaged+signed builds can show the system Allow prompt. Dev/unsigned
+  // builds typically fail silently — still attempt so Test Notification works
+  // the same path.
+  console.log('[notify] requesting macOS notification permission');
+  showNativeNotification({
+    title: 'Messenger for Mac',
+    body: 'Allow notifications to get alerts when new messages arrive.'
+  });
+}
+
 function setupNotificationBridge() {
   ipcMain.on('native-notify', (_event, payload = {}) => {
     // Skip while the user is actively looking at the app
     if (mainWindow && mainWindow.isFocused() && !mainWindow.isMinimized()) {
-      return;
-    }
-
-    if (!Notification.isSupported()) {
-      console.log('[notify] Electron Notification not supported on this system');
       return;
     }
 
@@ -52,20 +92,11 @@ function setupNotificationBridge() {
     lastNotifyKey = key;
     lastNotifyAt = now;
 
-    try {
-      const notification = new Notification({
-        title,
-        body,
-        silent: !!payload.silent
-      });
-      notification.on('click', () => focusMainWindow());
-      notification.on('failed', (_e, err) => {
-        console.log('[notify] failed:', err);
-      });
-      notification.show();
-    } catch (err) {
-      console.log('[notify] error:', err);
-    }
+    showNativeNotification({
+      title,
+      body,
+      silent: !!payload.silent
+    });
   });
 
   ipcMain.on('set-badge', (_event, count) => {
@@ -682,20 +713,23 @@ function createMenu() {
               });
               return;
             }
-            const n = new Notification({
+            // Force a fresh permission attempt if the user is debugging alerts
+            settings.hasRequestedNotificationPermission = true;
+            saveSettings(settings);
+            const n = showNativeNotification({
               title: 'Messenger for Mac',
               body: 'Native notifications are working.'
             });
-            n.on('click', () => focusMainWindow());
-            n.on('failed', (_e, err) => {
-              dialog.showMessageBox(mainWindow, {
-                type: 'warning',
-                title: 'Notification Failed',
-                message: 'macOS rejected the notification.',
-                detail: String(err || '') + '\n\nUnsigned/dev builds sometimes fail — a signed build is required for reliable alerts.'
+            if (n) {
+              n.on('failed', (_e, err) => {
+                dialog.showMessageBox(mainWindow, {
+                  type: 'warning',
+                  title: 'Notification Failed',
+                  message: 'macOS rejected the notification.',
+                  detail: String(err || '') + '\n\nCheck System Settings → Notifications → MessengerApp. Signed builds are required for reliable alerts.'
+                });
               });
-            });
-            n.show();
+            }
           }
         },
         { type: 'separator' },
@@ -716,6 +750,11 @@ app.whenReady().then(() => {
 
   createMenu();
   createWindow();
+
+  // Ask macOS for notification access (triggers the system Allow prompt).
+  // Delay past the first-run welcome window so dialogs don't stack.
+  const permissionDelay = settings.hasSeenWelcome ? 1500 : 4500;
+  setTimeout(() => requestMacNotificationPermission(), permissionDelay);
 
   // Show welcome window on first launch
   if (!settings.hasSeenWelcome) {

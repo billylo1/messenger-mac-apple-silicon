@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.1 (2026-08-03)
+
+### Bug Fixes
+- **Notification permission** — Requests macOS notification access on first launch so MessengerApp appears in System Settings → Notifications
+- Adds `NSUserNotificationAlertStyle` to Info.plist for proper Notification Center registration
+
+---
+
 ## v1.8.0 (2026-07-28)
 
 ### New Features
