@@ -1,6 +1,6 @@
 {
   "name": "messenger-app",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "description": "Standalone Facebook Messenger app for macOS",
   "main": "main.js",
   "repository": "https://github.com/billylo1/messenger-mac-apple-silicon",
@@ -28,8 +28,14 @@
       "category": "public.app-category.social-networking",
       "icon": "icon.icns",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": ["universal"]
+        },
+        {
+          "target": "zip",
+          "arch": ["universal"]
+        }
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,

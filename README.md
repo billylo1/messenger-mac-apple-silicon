@@ -8,17 +8,17 @@ A standalone desktop app for Facebook Messenger on macOS. Chat with friends with
 
 Upstream [stefanminch/messenger-mac](https://github.com/stefanminch/messenger-mac) ships an **x86_64** build. On Apple Silicon Macs that requires Rosetta, and future macOS versions may drop Rosetta support entirely.
 
-This fork delivers a **native arm64** release so the app runs without Rosetta and stays usable on future Apple Silicon–only macOS.
+This fork delivers a **universal** macOS binary (Apple Silicon + Intel) so the app runs natively on arm64 and on Intel Macs without juggling separate builds.
 
 <img src="icon.png" width="128" alt="Messenger for Mac">
 
 ## Download
 
-**[Download Messenger for Mac v1.8.2 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.8.3 (universal DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal.dmg)** | Apple Silicon + Intel · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
-> Native arm64 — no Rosetta required.
+> Universal binary — Apple Silicon + Intel.
 
 ## Features
 
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64.dmg)
+1. Download the [universal DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight
@@ -65,7 +65,7 @@ If Gatekeeper blocks the first launch, right-click the app → **Open**.
 
 - Node.js 18+
 - npm or yarn
-- Apple Silicon Mac (for a native arm64 build)
+- macOS with Node.js 18+ (universal builds are produced via electron-builder’s `universal` arch)
 - For signed + notarized builds: a **Developer ID Application** certificate in your login keychain (with private key), plus an Apple ID with an [app-specific password](https://appleid.apple.com/account/manage)
 
 ### Steps
@@ -103,8 +103,8 @@ npm run build
 
 Outputs land in `dist/`:
 
-- `MessengerApp-<version>-arm64.dmg`
-- `MessengerApp-<version>-arm64-mac.zip`
+- `MessengerApp-<version>-universal.dmg`
+- `MessengerApp-<version>-universal-mac.zip`
 - `latest-mac.yml` — **required** on every GitHub release for in-app self-update
 
 When creating a GitHub release, upload all three (DMG, zip, and `latest-mac.yml`). Self-update uses the zip + YAML feed; without `latest-mac.yml`, installed apps cannot find the new version.
@@ -118,7 +118,7 @@ Without `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`, the build 
 
 ## Upstream
 
-Based on [stefanminch/messenger-mac](https://github.com/stefanminch/messenger-mac). This fork focuses on shipping arm64 binaries for Apple Silicon.
+Based on [stefanminch/messenger-mac](https://github.com/stefanminch/messenger-mac). This fork ships a **universal** (arm64 + x64) macOS binary.
 
 ## FAQ
 
@@ -136,7 +136,7 @@ The app loads messenger.com in a native window — no modifications to Messenger
 - Less resource usage than a full browser
 
 ### Why not the upstream release?
-Upstream v1.3.0 is **x86_64** and needs Rosetta on Apple Silicon. This fork’s builds are **arm64** native.
+Upstream v1.3.0 is **x86_64** and needs Rosetta on Apple Silicon. This fork’s builds are **universal** (native arm64 + Intel).
 
 ### Does it support voice/video calls?
 Yes, all Messenger features work including voice and video calls.

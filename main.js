@@ -7,6 +7,7 @@ const fs = require('fs');
 const CURRENT_VERSION = app.getVersion();
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 const GITHUB_REPO_URL = 'https://github.com/billylo1/messenger-mac-apple-silicon';
+const UPSTREAM_REPO_URL = 'https://github.com/stefanminch/messenger-mac';
 
 // Aptabase (self-hosted) — must initialize before app.whenReady()
 initAptabase('A-SH-4674667238', {
@@ -800,16 +801,18 @@ app.whenReady().then(() => {
 
   // Native About panel — Credits.html (bundled) provides a clickable GitHub link;
   // unpackaged/dev falls back to the URL in the credits text field.
+  // Native About panel — Credits.html (bundled) has the disclaimer + repo links.
+  // Unpackaged/dev uses the credits string (no copyright line — avoids duplication).
   const aboutOptions = {
     applicationName: 'Messenger for Mac',
     applicationVersion: CURRENT_VERSION,
-    version: CURRENT_VERSION,
-    copyright: 'Open-source, unofficial utility. Not affiliated with Meta.'
+    version: CURRENT_VERSION
   };
   if (!app.isPackaged) {
     aboutOptions.credits =
       'Open-source, unofficial utility. Not affiliated with Meta.\n\n' +
-      GITHUB_REPO_URL;
+      `This fork: ${GITHUB_REPO_URL}\n` +
+      `Original by Stefan Minch: ${UPSTREAM_REPO_URL}`;
   }
   app.setAboutPanelOptions(aboutOptions);
 

@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.3 (2026-08-03)
+
+### Changes
+- **Universal binary** — Single DMG/zip for Apple Silicon and Intel (replaces arm64-only builds)
+- **About box** — Removes duplicated disclaimer; adds upstream Stefan Minch / messenger-mac link
+
+---
+
 ## v1.8.2 (2026-08-03)
 
 ### Improvements
