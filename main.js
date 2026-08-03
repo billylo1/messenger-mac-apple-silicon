@@ -6,6 +6,7 @@ const fs = require('fs');
 
 const CURRENT_VERSION = app.getVersion();
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
+const GITHUB_REPO_URL = 'https://github.com/billylo1/messenger-mac-apple-silicon';
 
 // Aptabase (self-hosted) — must initialize before app.whenReady()
 initAptabase('A-SH-4674667238', {
@@ -22,6 +23,7 @@ let lastNotifyAt = 0;
 let updateCheckSilent = true;
 let updatePromptOpen = false;
 let updaterConfigured = false;
+let userAcceptedDownload = false;
 
 function focusMainWindow() {
   if (!mainWindow) return;
@@ -231,6 +233,15 @@ function setupAutoUpdater() {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  // We don't publish .blockmap files on GitHub releases — force a full zip download.
+  autoUpdater.disableDifferentialDownload = true;
+  // Surface updater internals in Console.app / stdout for packaged debugging
+  autoUpdater.logger = {
+    info: (...args) => console.log('[updater]', ...args),
+    warn: (...args) => console.log('[updater:warn]', ...args),
+    error: (...args) => console.log('[updater:error]', ...args),
+    debug: (...args) => console.log('[updater:debug]', ...args)
+  };
 
   autoUpdater.on('update-available', (info) => {
     if (updatePromptOpen) return;
@@ -246,20 +257,50 @@ function setupAutoUpdater() {
       cancelId: 1
     }).then(({ response }) => {
       updatePromptOpen = false;
-      if (response === 0) {
-        autoUpdater.downloadUpdate().catch((err) => {
-          console.log('[updater] download failed:', err);
-          if (!updateCheckSilent) {
-            dialog.showMessageBox(mainWindow, {
-              type: 'warning',
-              title: 'Update Failed',
-              message: 'Could not download the update.',
-              detail: String(err && err.message ? err.message : err)
-            });
-          }
-        });
+      if (response !== 0) return;
+
+      userAcceptedDownload = true;
+      console.log('[updater] user accepted download for', version);
+
+      // Immediate feedback — the zip is ~90MB and otherwise looks hung
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.setProgressBar(0);
       }
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: 'Downloading Update',
+        message: `Downloading v${version}…`,
+        detail: 'This may take a minute. The dock icon shows download progress. You will be asked to restart when it is ready.',
+        buttons: ['OK']
+      });
+
+      autoUpdater.downloadUpdate().catch((err) => {
+        console.log('[updater] download failed:', err);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.setProgressBar(-1);
+        }
+        dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          title: 'Update Failed',
+          message: 'Could not download the update.',
+          detail: String(err && err.message ? err.message : err)
+        });
+        userAcceptedDownload = false;
+      });
     });
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    const fraction = Math.max(0, Math.min(1, (progress.percent || 0) / 100));
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(fraction);
+    }
+    if (progress.percent && Math.floor(progress.percent) % 10 === 0) {
+      console.log(
+        `[updater] download ${progress.percent.toFixed(0)}% ` +
+        `(${Math.round((progress.transferred || 0) / 1e6)}/${Math.round((progress.total || 0) / 1e6)} MB)`
+      );
+    }
   });
 
   autoUpdater.on('update-not-available', () => {
@@ -275,6 +316,10 @@ function setupAutoUpdater() {
 
   autoUpdater.on('update-downloaded', (info) => {
     const version = info.version || 'new';
+    console.log('[updater] downloaded', version);
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(-1);
+    }
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Update Ready',
@@ -293,13 +338,21 @@ function setupAutoUpdater() {
 
   autoUpdater.on('error', (err) => {
     console.log('[updater] error:', err);
-    if (!updateCheckSilent) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setProgressBar(-1);
+    }
+    // Always show errors after the user opted into a download; otherwise only
+    // for manual "Check for Updates..." (silent startup checks stay quiet).
+    if (userAcceptedDownload || !updateCheckSilent) {
       dialog.showMessageBox(mainWindow, {
         type: 'warning',
-        title: 'Update Check Failed',
-        message: 'Could not check for updates.',
+        title: 'Update Failed',
+        message: userAcceptedDownload
+          ? 'Could not download or install the update.'
+          : 'Could not check for updates.',
         detail: String(err && err.message ? err.message : err)
       });
+      userAcceptedDownload = false;
     }
   });
 }
@@ -744,6 +797,21 @@ function createMenu() {
 
 app.whenReady().then(() => {
   trackEvent('app_started');
+
+  // Native About panel — Credits.html (bundled) provides a clickable GitHub link;
+  // unpackaged/dev falls back to the URL in the credits text field.
+  const aboutOptions = {
+    applicationName: 'Messenger for Mac',
+    applicationVersion: CURRENT_VERSION,
+    version: CURRENT_VERSION,
+    copyright: 'Open-source, unofficial utility. Not affiliated with Meta.'
+  };
+  if (!app.isPackaged) {
+    aboutOptions.credits =
+      'Open-source, unofficial utility. Not affiliated with Meta.\n\n' +
+      GITHUB_REPO_URL;
+  }
+  app.setAboutPanelOptions(aboutOptions);
 
   setupPermissionHandlers(session.defaultSession);
   setupNotificationBridge();

@@ -14,9 +14,9 @@ This fork delivers a **native arm64** release so the app runs without Rosetta an
 
 ## Download
 
-**[Download Messenger for Mac v1.8.1 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.1/MessengerApp-1.8.1-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
+**[Download Messenger for Mac v1.8.2 (arm64 DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64.dmg)** | Apple Silicon (M1/M2/M3/M4) · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.1/MessengerApp-1.8.1-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Native arm64 — no Rosetta required.
 
@@ -52,7 +52,7 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
-1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.1/MessengerApp-1.8.1-arm64.dmg)
+1. Download the [arm64 DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.2/MessengerApp-1.8.2-arm64.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight

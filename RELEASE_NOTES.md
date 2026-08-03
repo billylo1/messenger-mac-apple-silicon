@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.8.2 (2026-08-03)
+
+### Improvements
+- **Self-update UX** — Shows download progress after accepting an update; surfaces download errors (previously silent on startup checks)
+- Forces full zip download (no differential/blockmap dependency)
+- **About box** — Open-source / unofficial disclaimer, clickable GitHub repo link (`Credits.html`)
+
+---
+
 ## v1.8.1 (2026-08-03)
 
 ### Bug Fixes
