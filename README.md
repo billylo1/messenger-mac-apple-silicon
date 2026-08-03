@@ -52,6 +52,18 @@ All settings (sidebar visibility) are persisted across app restarts.
 
 ## Installation
 
+### Homebrew (recommended)
+
+```bash
+brew tap billylo1/messenger
+brew trust billylo1/messenger
+brew install --cask messenger-mac
+```
+
+Upgrade later with `brew upgrade --cask messenger-mac`.
+
+### Manual
+
 1. Download the [universal DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
