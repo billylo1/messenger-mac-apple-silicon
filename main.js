@@ -80,8 +80,12 @@ function requestMacNotificationPermission() {
 
 function setupNotificationBridge() {
   ipcMain.on('native-notify', (_event, payload = {}) => {
+    const source = payload.source || 'unknown';
+    console.log('[notify] ipc from', source, payload.title, (payload.body || '').slice(0, 80));
+
     // Skip while the user is actively looking at the app
     if (mainWindow && mainWindow.isFocused() && !mainWindow.isMinimized()) {
+      console.log('[notify] skipped (window focused)');
       return;
     }
 
@@ -90,6 +94,7 @@ function setupNotificationBridge() {
     const key = `${payload.tag || ''}|${title}|${body}`;
     const now = Date.now();
     if (key === lastNotifyKey && now - lastNotifyAt < 2000) {
+      console.log('[notify] skipped (dedupe)');
       return;
     }
     lastNotifyKey = key;
@@ -149,8 +154,8 @@ function injectNotificationHooks(webContents) {
 
 function setPageVisibility(hidden) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  // Messenger often suppresses alerts while document.visibilityState === 'visible'.
-  // Spoof hidden when the window is blurred/minimized so it will raise notifications.
+  // Messenger suppresses alerts while the page looks focused/visible.
+  // Spoof hidden + hasFocus when the window is blurred/minimized.
   const script = `
     (function() {
       try {
@@ -162,7 +167,11 @@ function setPageVisibility(hidden) {
           configurable: true,
           get: function() { return '${hidden ? 'hidden' : 'visible'}'; }
         });
+        document.hasFocus = function() { return ${hidden ? 'false' : 'true'}; };
         document.dispatchEvent(new Event('visibilitychange'));
+        try {
+          window.dispatchEvent(new Event(${hidden ? "'blur'" : "'focus'"}));
+        } catch (e) {}
       } catch (e) {}
     })();
   `;

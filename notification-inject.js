@@ -1,10 +1,18 @@
 // Runs in the page world (main frame + iframes). No Node/Electron APIs.
 // Relies on window.messengerDesktop when the preload bridge is present;
 // otherwise relays to window.top via postMessage.
+//
+// Messenger often never calls Notification API inside an Electron shell.
+// We hijack Notification/SW when it does, and also synthesize native alerts
+// from document.title unread changes while the window is "hidden".
 
 (function () {
   if (window.__messengerDesktopInjected) return;
   window.__messengerDesktopInjected = true;
+
+  var lastBadge = -1;
+  var lastTitleNotifyAt = 0;
+  var lastTitleBody = '';
 
   function forwardNotify(title, options, source) {
     var opts = options || {};
@@ -12,6 +20,10 @@
     var tag = opts.tag != null ? String(opts.tag) : '';
     var silent = !!opts.silent;
     var icon = typeof opts.icon === 'string' ? opts.icon : '';
+
+    try {
+      console.log('[md-notify]', source, String(title || ''), body.slice(0, 80));
+    } catch (e) {}
 
     // Cross-origin iframes may lack the preload bridge — relay to top frame.
     if (window !== window.top && !(window.messengerDesktop && window.messengerDesktop.notify)) {
@@ -80,16 +92,26 @@
   HijackedNotification.requestPermission = function () {
     return Promise.resolve('granted');
   };
-  window.Notification = HijackedNotification;
 
-  try {
-    if (typeof ServiceWorkerRegistration !== 'undefined') {
-      ServiceWorkerRegistration.prototype.showNotification = function (title, options) {
-        forwardNotify(title, options || {}, 'SW');
-        return Promise.resolve();
-      };
+  function installNotificationHooks() {
+    window.Notification = HijackedNotification;
+    try {
+      if (typeof ServiceWorkerRegistration !== 'undefined') {
+        ServiceWorkerRegistration.prototype.showNotification = function (title, options) {
+          forwardNotify(title, options || {}, 'SW');
+          return Promise.resolve();
+        };
+      }
+    } catch (e) {}
+  }
+  installNotificationHooks();
+
+  // Meta sometimes restores window.Notification after boot — keep ours in place.
+  setInterval(function () {
+    if (window.Notification !== HijackedNotification) {
+      installNotificationHooks();
     }
-  } catch (e) {}
+  }, 2000);
 
   if (window === window.top) {
     window.addEventListener('message', function (e) {
@@ -112,10 +134,57 @@
       return m ? parseInt(m[1], 10) : 0;
     }
 
-    function updateBadge() {
-      if (window.messengerDesktop && window.messengerDesktop.setBadge) {
-        window.messengerDesktop.setBadge(parseBadge(document.title));
+    function isBoringTitle(title) {
+      return !title || title === 'Messenger' || title === 'Messenger for Mac' || /^\(\d+\)\s*Messenger/.test(title);
+    }
+
+    function notifyFromTitle(title, reason) {
+      // Only while page is considered backgrounded (spoofed by main process).
+      if (!document.hidden) return;
+
+      var now = Date.now();
+      var body;
+      var count = parseBadge(title);
+
+      if (!isBoringTitle(title) && !/^\(\d+\)/.test(title)) {
+        // e.g. "Alice messaged you"
+        body = title;
+      } else if (count > lastBadge && count > 0) {
+        body = count === 1 ? 'You have a new message' : 'You have ' + count + ' new messages';
+      } else {
+        return;
       }
+
+      if (body === lastTitleBody && now - lastTitleNotifyAt < 4000) return;
+      lastTitleBody = body;
+      lastTitleNotifyAt = now;
+
+      forwardNotify('Messenger', { body: body, tag: 'title-' + reason }, 'title');
+    }
+
+    var lastSeenTitle = null;
+
+    function updateBadge() {
+      var title = document.title || '';
+      var count = parseBadge(title);
+
+      if (window.messengerDesktop && window.messengerDesktop.setBadge) {
+        window.messengerDesktop.setBadge(count);
+      }
+
+      // Only act on title changes — the poll interval must not spam alerts.
+      if (title !== lastSeenTitle) {
+        var prevBadge = lastBadge;
+        lastSeenTitle = title;
+
+        if (!/^\(\d+\)/.test(title)) {
+          notifyFromTitle(title, 'title-text');
+        } else if (prevBadge >= 0 && count > prevBadge) {
+          notifyFromTitle(title, 'badge-up');
+        }
+      }
+
+      lastBadge = count;
     }
 
     function observeTitle() {
@@ -127,6 +196,8 @@
         characterData: true,
         subtree: true
       });
+      lastBadge = parseBadge(document.title || '');
+      lastSeenTitle = document.title || '';
       updateBadge();
     }
 
@@ -134,6 +205,6 @@
       observeTitle();
     }
     document.addEventListener('DOMContentLoaded', observeTitle);
-    setInterval(updateBadge, 2000);
+    setInterval(updateBadge, 1500);
   }
 })();

@@ -14,9 +14,9 @@ This fork delivers a **universal** macOS binary (Apple Silicon + Intel) so the a
 
 ## Download
 
-**[Download Messenger for Mac v1.8.3 (universal DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal.dmg)** | Apple Silicon + Intel · macOS 10.13+
+**[Download Messenger for Mac v1.8.4 (universal DMG)](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.4/MessengerApp-1.8.4-universal.dmg)** | Apple Silicon + Intel · macOS 10.13+
 
-[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
+[Zip build](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.4/MessengerApp-1.8.4-universal-mac.zip) · [All releases](https://github.com/billylo1/messenger-mac-apple-silicon/releases)
 
 > Universal binary — Apple Silicon + Intel.
 
@@ -64,7 +64,7 @@ Upgrade later with `brew upgrade --cask messenger-mac`.
 
 ### Manual
 
-1. Download the [universal DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.3/MessengerApp-1.8.3-universal.dmg)
+1. Download the [universal DMG](https://github.com/billylo1/messenger-mac-apple-silicon/releases/download/v1.8.4/MessengerApp-1.8.4-universal.dmg)
 2. Open the DMG
 3. Drag **MessengerApp** to your **Applications** folder
 4. Launch from Applications or Spotlight

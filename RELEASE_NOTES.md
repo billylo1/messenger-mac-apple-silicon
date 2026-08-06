@@ -1,5 +1,14 @@
 # Release Notes
 
+## v1.8.4 (2026-08-06)
+
+### Bug Fixes
+- **Messenger → native notifications** — Preload no longer uses Node `fs` under Electron’s sandboxed renderer, so the `messengerDesktop` bridge loads and message alerts can reach macOS
+- Synthesizes native alerts from unread title changes when Messenger does not call `Notification`
+- Spoofs `document.hasFocus()` when backgrounded; re-applies Notification hijack if Meta restores it
+
+---
+
 ## v1.8.3 (2026-08-03)
 
 ### Changes
