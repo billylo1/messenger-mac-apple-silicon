@@ -27,7 +27,7 @@ This fork delivers a **universal** macOS binary (Apple Silicon + Intel) so the a
 - **Persistent Login** - Stay logged in between app restarts
 - **Native Notifications** - Get notified of new messages (dock badge + macOS alerts)
 - **Minimal & Fast** - Lightweight app with low memory footprint
-- **Privacy Focused** - No tracking, no analytics, no data collection
+- **Privacy Focused** - No personal chat content is collected; optional anonymous usage analytics only when configured for a release build
 - **Dark Mode Support** - Follows your macOS appearance settings
 - **External Links** - Shared links open in your default browser
 - **Background Delivery** - Stays connected when unfocused so new messages still arrive
@@ -162,8 +162,22 @@ Facebook Messenger Mac, Messenger Desktop App, Messenger macOS, Facebook Chat Ma
 
 ## License
 
-MIT License - feel free to modify and distribute.
+This project is licensed under the [MIT License](LICENSE).
+
+## Privacy
+
+- The app loads Facebook Messenger (messenger.com). Meta’s own privacy policy applies to that service.
+- This wrapper does **not** read or upload your message contents.
+- Optional **anonymous** telemetry may run in official release builds when analytics keys are baked in at build time:
+  - Aptabase (self-hosted): `app_started` style events
+  - CounterAPI: daily/unique install pings
+- Local/`npm start` builds have analytics **disabled** unless you set `APTABASE_*` in the environment or provide `aptabase.config.json` (gitignored).
+- Notarization credentials in `.env` never ship inside the app.
 
 ## Disclaimer
 
 This project is not affiliated with, authorized, maintained, sponsored, or endorsed by Meta/Facebook or any of its affiliates or subsidiaries. This is an independent and unofficial app. Use at your own risk.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).

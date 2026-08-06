@@ -9,7 +9,8 @@ if [[ -f .env ]]; then
   set +a
 fi
 
-# Bake Aptabase settings into the app package (values stay out of git via .env)
+# Bake Aptabase settings into the app package (values stay out of git via .env).
+# Always write aptabase.config.json so electron-builder extraResources can copy it.
 if [[ -n "${APTABASE_APP_KEY:-}" && -n "${APTABASE_HOST:-}" ]]; then
   host="$APTABASE_HOST"
   if [[ "$host" != http://* && "$host" != https://* ]]; then
@@ -18,7 +19,7 @@ if [[ -n "${APTABASE_APP_KEY:-}" && -n "${APTABASE_HOST:-}" ]]; then
   printf '{"appKey":"%s","host":"%s"}\n' "$APTABASE_APP_KEY" "$host" > aptabase.config.json
 else
   echo "warning: APTABASE_APP_KEY / APTABASE_HOST not set — analytics will be disabled in this build" >&2
-  rm -f aptabase.config.json
+  printf '{}\n' > aptabase.config.json
 fi
 
 # After a successful build, attach dist/latest-mac.yml to the GitHub release

@@ -9,10 +9,50 @@ const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 const GITHUB_REPO_URL = 'https://github.com/billylo1/messenger-mac-apple-silicon';
 const UPSTREAM_REPO_URL = 'https://github.com/stefanminch/messenger-mac';
 
-// Aptabase (self-hosted) — must initialize before app.whenReady()
-initAptabase('A-SH-4674667238', {
-  host: 'https://aptabase.evergreen-labs.org'
-});
+function loadAptabaseConfig() {
+  const candidates = [];
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'aptabase.config.json'));
+  }
+  candidates.push(path.join(__dirname, 'aptabase.config.json'));
+
+  for (const configPath of candidates) {
+    try {
+      if (!fs.existsSync(configPath)) continue;
+      const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      if (cfg && cfg.appKey) {
+        return {
+          appKey: String(cfg.appKey),
+          host: cfg.host ? String(cfg.host) : undefined
+        };
+      }
+    } catch (e) {
+      console.log('[aptabase] failed to read', configPath, e);
+    }
+  }
+
+  if (process.env.APTABASE_APP_KEY) {
+    return {
+      appKey: process.env.APTABASE_APP_KEY,
+      host: process.env.APTABASE_HOST || undefined
+    };
+  }
+
+  return null;
+}
+
+// Aptabase — only when a key is provided via aptabase.config.json or env.
+// Must initialize before app.whenReady().
+const aptabaseConfig = loadAptabaseConfig();
+let aptabaseEnabled = false;
+if (aptabaseConfig) {
+  const options = {};
+  if (aptabaseConfig.host) options.host = aptabaseConfig.host;
+  initAptabase(aptabaseConfig.appKey, options);
+  aptabaseEnabled = true;
+} else {
+  console.log('[aptabase] disabled (no app key configured)');
+}
 
 // Set app data path explicitly
 app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
@@ -806,7 +846,9 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
-  trackEvent('app_started');
+  if (aptabaseEnabled) {
+    trackEvent('app_started');
+  }
 
   // Native About panel — Credits.html (bundled) provides a clickable GitHub link;
   // unpackaged/dev falls back to the URL in the credits text field.
