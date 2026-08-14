@@ -13,6 +13,10 @@
   var lastBadge = -1;
   var lastTitleNotifyAt = 0;
   var lastTitleBody = '';
+  // Personal titles already alerted for this unread episode (cleared when badge → 0).
+  var notifiedPersonal = Object.create(null);
+  // Suppress title synthesis briefly after a real Notification/SW alert.
+  var lastApiNotifyAt = 0;
 
   function forwardNotify(title, options, source) {
     var opts = options || {};
@@ -24,6 +28,10 @@
     try {
       console.log('[md-notify]', source, String(title || ''), body.slice(0, 80));
     } catch (e) {}
+
+    if (source === 'Notification' || source === 'SW' || source === 'iframe') {
+      lastApiNotifyAt = Date.now();
+    }
 
     // Cross-origin iframes may lack the preload bridge — relay to top frame.
     if (window !== window.top && !(window.messengerDesktop && window.messengerDesktop.notify)) {
@@ -129,35 +137,45 @@
     });
 
     function parseBadge(title) {
-      if (!title) return 0;
+      if (!title) return null;
       var m = String(title).match(/^\((\d+)\)/);
-      return m ? parseInt(m[1], 10) : 0;
+      return m ? parseInt(m[1], 10) : null;
+    }
+
+    function isPlainMessenger(title) {
+      return title === 'Messenger' || title === 'Messenger for Mac';
     }
 
     function isBoringTitle(title) {
-      return !title || title === 'Messenger' || title === 'Messenger for Mac' || /^\(\d+\)\s*Messenger/.test(title);
+      return !title || isPlainMessenger(title) || /^\(\d+\)\s*Messenger/.test(title);
     }
 
-    function notifyFromTitle(title, reason) {
+    function notifyFromTitle(title, reason, count) {
       // Only while page is considered backgrounded (spoofed by main process).
       if (!document.hidden) return;
 
+      // Real Notification/SW already alerted — skip synthetic title spam.
+      if (Date.now() - lastApiNotifyAt < 8000) return;
+
       var now = Date.now();
       var body;
-      var count = parseBadge(title);
 
-      if (!isBoringTitle(title) && !/^\(\d+\)/.test(title)) {
+      if (!isBoringTitle(title) && parseBadge(title) === null) {
         // e.g. "Alice messaged you"
         body = title;
-      } else if (count > lastBadge && count > 0) {
+        if (notifiedPersonal[body]) return;
+      } else if (typeof count === 'number' && count > lastBadge && count > 0) {
         body = count === 1 ? 'You have a new message' : 'You have ' + count + ' new messages';
       } else {
         return;
       }
 
-      if (body === lastTitleBody && now - lastTitleNotifyAt < 4000) return;
+      if (body === lastTitleBody && now - lastTitleNotifyAt < 15000) return;
       lastTitleBody = body;
       lastTitleNotifyAt = now;
+      if (parseBadge(title) === null && !isBoringTitle(title)) {
+        notifiedPersonal[body] = true;
+      }
 
       forwardNotify('Messenger', { body: body, tag: 'title-' + reason }, 'title');
     }
@@ -167,24 +185,46 @@
     function updateBadge() {
       var title = document.title || '';
       var count = parseBadge(title);
+      var hasBadge = count !== null;
 
+      // Dock badge: never treat a personal title ("Alice messaged you") as zero unread.
+      // That was resetting lastBadge → 0 and causing an infinite notify loop when the
+      // title oscillated between "(N) Messenger" and a personal message string.
       if (window.messengerDesktop && window.messengerDesktop.setBadge) {
-        window.messengerDesktop.setBadge(count);
+        if (hasBadge) {
+          window.messengerDesktop.setBadge(count);
+        } else if (isPlainMessenger(title)) {
+          window.messengerDesktop.setBadge(0);
+        }
       }
 
-      // Only act on title changes — the poll interval must not spam alerts.
       if (title !== lastSeenTitle) {
         var prevBadge = lastBadge;
         lastSeenTitle = title;
 
-        if (!/^\(\d+\)/.test(title)) {
-          notifyFromTitle(title, 'title-text');
-        } else if (prevBadge >= 0 && count > prevBadge) {
-          notifyFromTitle(title, 'badge-up');
+        if (!hasBadge && !isBoringTitle(title)) {
+          notifyFromTitle(title, 'title-text', prevBadge);
+          // Personal titles omit the unread count. Bump lastBadge so a following
+          // "(1) Messenger" title does not look like a brand-new badge increase.
+          if (lastBadge < 1) lastBadge = 1;
+        } else if (hasBadge && prevBadge >= 0 && count > prevBadge) {
+          notifyFromTitle(title, 'badge-up', count);
+          lastBadge = count;
+        } else if (hasBadge) {
+          lastBadge = count;
+          if (count === 0) {
+            notifiedPersonal = Object.create(null);
+          }
+        } else if (isPlainMessenger(title)) {
+          lastBadge = 0;
+          notifiedPersonal = Object.create(null);
+        }
+      } else if (hasBadge) {
+        lastBadge = count;
+        if (count === 0) {
+          notifiedPersonal = Object.create(null);
         }
       }
-
-      lastBadge = count;
     }
 
     function observeTitle() {
@@ -196,7 +236,8 @@
         characterData: true,
         subtree: true
       });
-      lastBadge = parseBadge(document.title || '');
+      var initial = parseBadge(document.title || '');
+      lastBadge = initial !== null ? initial : 0;
       lastSeenTitle = document.title || '';
       updateBadge();
     }

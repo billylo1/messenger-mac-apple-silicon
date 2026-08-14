@@ -60,6 +60,7 @@ app.setPath('userData', path.join(app.getPath('appData'), 'MessengerApp'));
 let mainWindow;
 let isQuitting = false;
 let lastNotifyKey = '';
+let lastNotifyBodyKey = '';
 let lastNotifyAt = 0;
 let updateCheckSilent = true;
 let updatePromptOpen = false;
@@ -131,13 +132,21 @@ function setupNotificationBridge() {
 
     const title = payload.title || 'Messenger';
     const body = payload.body || '';
+    // Dedupe identical alerts, and also collapse rapid title↔API duplicates
+    // (same body within a short window even if tag/source differs).
     const key = `${payload.tag || ''}|${title}|${body}`;
+    const bodyKey = `${title}|${body}`;
     const now = Date.now();
-    if (key === lastNotifyKey && now - lastNotifyAt < 2000) {
+    if (key === lastNotifyKey && now - lastNotifyAt < 5000) {
       console.log('[notify] skipped (dedupe)');
       return;
     }
+    if (bodyKey === lastNotifyBodyKey && now - lastNotifyAt < 5000) {
+      console.log('[notify] skipped (body dedupe)');
+      return;
+    }
     lastNotifyKey = key;
+    lastNotifyBodyKey = bodyKey;
     lastNotifyAt = now;
 
     showNativeNotification({
@@ -833,6 +842,42 @@ function createMenu() {
                 });
               });
             }
+          }
+        },
+        {
+          label: 'Simulate Unread Title Loop',
+          click: () => {
+            if (!mainWindow || mainWindow.isDestroyed()) return;
+            // Reproduce Messenger oscillating between badge and personal titles.
+            // After blur, a fixed build should alert once or twice — not forever.
+            mainWindow.minimize();
+            setPageVisibility(true);
+            const script = `
+              (function() {
+                var i = 0;
+                var titles = [
+                  '(1) Messenger',
+                  'Test User messaged you',
+                  '(1) Messenger',
+                  'Test User messaged you',
+                  '(1) Messenger',
+                  'Test User messaged you',
+                  '(1) Messenger',
+                  'Messenger'
+                ];
+                function step() {
+                  if (i >= titles.length) return;
+                  document.title = titles[i++];
+                  setTimeout(step, 1200);
+                }
+                step();
+              })();
+            `;
+            setTimeout(() => {
+              mainWindow.webContents.executeJavaScript(script, true).catch((err) => {
+                console.log('[notify] simulate failed:', err);
+              });
+            }, 400);
           }
         },
         { type: 'separator' },

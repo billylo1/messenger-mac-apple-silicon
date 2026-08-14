@@ -1,5 +1,13 @@
 # Release Notes
 
+## v1.8.5 (2026-08-13)
+
+### Bug Fixes
+- **Notification storm** — Stops repeated native alerts when Messenger flips the window title between `(N) Messenger` and a personal message string
+- Keeps dock badge / unread tracking stable across those title changes; dedupes rapid duplicate alerts
+
+---
+
 ## v1.8.4 (2026-08-06)
 
 ### Bug Fixes
