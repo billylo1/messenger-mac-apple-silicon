@@ -1,5 +1,12 @@
 # Release Notes
 
+## v1.8.6 (2026-08-20)
+
+### Bug Fixes
+- **Dock badge refresh** — Clears or updates the app-icon unread count after messages are read in-app or on another device (without reintroducing the notification storm)
+
+---
+
 ## v1.8.5 (2026-08-13)
 
 ### Bug Fixes

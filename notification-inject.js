@@ -150,6 +150,26 @@
       return !title || isPlainMessenger(title) || /^\(\d+\)\s*Messenger/.test(title);
     }
 
+    // Temporary badge-less titles Messenger uses while announcing unread.
+    // Must NOT clear the dock badge (that caused the notify storm when titles
+    // oscillated), but conversation names / inbox titles SHOULD clear it.
+    function isTransientAlertTitle(title) {
+      if (!title || isBoringTitle(title) || parseBadge(title) !== null) return false;
+      return /messaged you|sent you|sent a |sent an |sent you a |sent you an /i.test(title);
+    }
+
+    function applyDockBadge(count) {
+      if (window.messengerDesktop && window.messengerDesktop.setBadge) {
+        window.messengerDesktop.setBadge(count > 0 ? count : 0);
+      }
+    }
+
+    function clearUnreadState() {
+      lastBadge = 0;
+      notifiedPersonal = Object.create(null);
+      applyDockBadge(0);
+    }
+
     function notifyFromTitle(title, reason, count) {
       // Only while page is considered backgrounded (spoofed by main process).
       if (!document.hidden) return;
@@ -186,43 +206,34 @@
       var title = document.title || '';
       var count = parseBadge(title);
       var hasBadge = count !== null;
+      var focused = !document.hidden;
+      var prevBadge = lastBadge;
+      var titleChanged = title !== lastSeenTitle;
+      if (titleChanged) lastSeenTitle = title;
 
-      // Dock badge: never treat a personal title ("Alice messaged you") as zero unread.
-      // That was resetting lastBadge → 0 and causing an infinite notify loop when the
-      // title oscillated between "(N) Messenger" and a personal message string.
-      if (window.messengerDesktop && window.messengerDesktop.setBadge) {
-        if (hasBadge) {
-          window.messengerDesktop.setBadge(count);
-        } else if (isPlainMessenger(title)) {
-          window.messengerDesktop.setBadge(0);
+      // Dock badge sync:
+      // - "(N) …" → N (covers decreases when read elsewhere)
+      // - focused + no count → clear (read in-app / chat title)
+      // - plain "Messenger" → clear (inbox caught up, including while backgrounded)
+      // - other background titles (e.g. "Alice messaged you") → keep count
+      if (hasBadge) {
+        lastBadge = count;
+        applyDockBadge(count);
+        if (count === 0) {
+          notifiedPersonal = Object.create(null);
         }
+      } else if (focused || isPlainMessenger(title)) {
+        clearUnreadState();
       }
 
-      if (title !== lastSeenTitle) {
-        var prevBadge = lastBadge;
-        lastSeenTitle = title;
-
-        if (!hasBadge && !isBoringTitle(title)) {
+      if (titleChanged) {
+        if (!hasBadge && isTransientAlertTitle(title)) {
           notifyFromTitle(title, 'title-text', prevBadge);
           // Personal titles omit the unread count. Bump lastBadge so a following
           // "(1) Messenger" title does not look like a brand-new badge increase.
           if (lastBadge < 1) lastBadge = 1;
         } else if (hasBadge && prevBadge >= 0 && count > prevBadge) {
           notifyFromTitle(title, 'badge-up', count);
-          lastBadge = count;
-        } else if (hasBadge) {
-          lastBadge = count;
-          if (count === 0) {
-            notifiedPersonal = Object.create(null);
-          }
-        } else if (isPlainMessenger(title)) {
-          lastBadge = 0;
-          notifiedPersonal = Object.create(null);
-        }
-      } else if (hasBadge) {
-        lastBadge = count;
-        if (count === 0) {
-          notifiedPersonal = Object.create(null);
         }
       }
     }
@@ -241,6 +252,12 @@
       lastSeenTitle = document.title || '';
       updateBadge();
     }
+
+    // When the window becomes focused, force a resync so a stale dock badge
+    // cannot linger after messages were read in-app or on another device.
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) updateBadge();
+    });
 
     if (document.documentElement) {
       observeTitle();
