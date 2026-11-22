@@ -1,5 +1,12 @@
 # Release Notes
 
+## v1.8.8 (2026-11-22)
+
+### Bug Fixes
+- **App icon** — Fills the transparent lightning bolt cutout with solid white so the icon renders cleanly on the macOS Dock and launch bar
+
+---
+
 ## v1.8.7 (2026-11-22)
 
 ### Bug Fixes
