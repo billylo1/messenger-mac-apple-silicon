@@ -217,11 +217,7 @@
       // - plain "Messenger" → clear (inbox caught up, including while backgrounded)
       // - other background titles (e.g. "Alice messaged you") → keep count
       if (hasBadge) {
-        lastBadge = count;
         applyDockBadge(count);
-        if (count === 0) {
-          notifiedPersonal = Object.create(null);
-        }
       } else if (focused || isPlainMessenger(title)) {
         clearUnreadState();
       }
@@ -234,6 +230,13 @@
           if (lastBadge < 1) lastBadge = 1;
         } else if (hasBadge && prevBadge >= 0 && count > prevBadge) {
           notifyFromTitle(title, 'badge-up', count);
+        }
+      }
+
+      if (hasBadge) {
+        lastBadge = count;
+        if (count === 0) {
+          notifiedPersonal = Object.create(null);
         }
       }
     }

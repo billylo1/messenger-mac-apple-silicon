@@ -1,5 +1,12 @@
 # Release Notes
 
+## v1.8.7 (2026-11-22)
+
+### Bug Fixes
+- **Unread badge notifications** — Restores macOS notifications when the unread badge count increases (`title-badge-up`), fixing a regression in v1.8.6 where `lastBadge` was updated before comparing the new count
+
+---
+
 ## v1.8.6 (2026-08-20)
 
 ### Bug Fixes
